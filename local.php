@@ -86,7 +86,7 @@ return [
 
     'defaultLanguageIndex' => 1,
 
-    'activeLanguages' => array('fr','en','de','nl','es','ro','it','ja','pl','pt','zh'),
+    'activeLanguages' => ['fr','en','de','nl','es','ro','it','ja','pl','pt','zh'],
 
     'appVersion' => $package_json['version'],
 
@@ -108,8 +108,6 @@ return [
         'cliModel' => 'generic',
     ],
 
-    'twoFactorAuthEnforced' => false,
-
     'mospApiUrl' => 'https://objects.monarc.lu/api/',
 
     'statsApi' => [
@@ -121,4 +119,31 @@ return [
         'uploadFolder' => $appdir . '/data/import/files',
         'isBackgroundProcessActive' => false,
     ],
+
+    'export' => [
+        'defaultWithEval' => true,
+    ],
+
+    'captcha' => [
+        'enabled' => true,
+        'failedLoginAttempts' => 3,
+        'params' => [
+            'name' => 'MonarcCaptcha',
+            'font' => $appdir . '/data/fonts/arial.ttf',
+            'fontSize' => 30,
+            'height' => 60,
+            'wordLen' => 6,
+            'timeout' => 300,
+            'imgDir' => $appdir . '/public/captcha',
+            'imgUrl' => 'captcha/',
+        ],
+    ],
+
+    /* Custom configuration of the smtp. The example config below is to make Mailcatcher work for the dev env.
+    'smtpOptions' => [
+        'name' => 'localhost',
+        'host' => '127.0.0.1',
+        'port' => 1025,
+    ],
+    */
 ];

@@ -11,6 +11,11 @@ mkdir -p $PATH_TO_MONARC/data/cache $PATH_TO_MONARC/data/DoctrineORMModule/Proxy
 # fix permissions in data dir
 chown -R www-data:www-data $PATH_TO_MONARC/data
 
+# Create captcha directory and set permissions
+mkdir -p $PATH_TO_MONARC/public/captcha
+chown www-data:www-data $PATH_TO_MONARC/public/captcha
+
+
 MAX_RETRIES=10
 RETRY_DELAY=10
 
