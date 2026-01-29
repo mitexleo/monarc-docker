@@ -12,7 +12,7 @@ ENV APPLICATION_ENV=production
 ENV PATH_TO_MONARC=/var/lib/monarc/fo
 ENV MONARCFO_RELEASE_URL=https://github.com/monarc-project/MonarcAppFO/releases/download/$MONARC_VERSION/MonarcAppFO-$MONARC_VERSION.tar.gz
 
-RUN apt-get update && apt-get install -y zip unzip git gettext curl gsfonts software-properties-common git mariadb-client vim imagemagick libzip4
+RUN apt-get update && apt-get install -y ca-certificates zip unzip git gettext curl gsfonts mariadb-client vim imagemagick
 # dev dependencies for build
 RUN apt-get install -y --no-install-recommends libzip-dev libonig-dev libcurl4-openssl-dev libicu-dev libpng-dev libxml2-dev libmagickwand-dev
 
@@ -51,7 +51,7 @@ COPY local.php $PATH_TO_MONARC/config/autoload/local.php
 COPY initdb.sh /var/lib/monarc/initdb.sh
 RUN chmod ugo+x /var/lib/monarc/initdb.sh
 
-#RUN apt-get remove -y libzip-dev libonig-dev libcurl4-openssl-dev libicu-dev libpng-dev libxml2-dev libmagickwand-dev
+RUN apt-get remove -y libzip-dev libonig-dev libcurl4-openssl-dev libicu-dev libpng-dev libxml2-dev libmagickwand-dev
 RUN apt -y autoclean && apt -y autoremove && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 80
