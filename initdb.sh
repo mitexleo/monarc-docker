@@ -5,6 +5,19 @@ if [ -f "$PATH_TO_MONARC/data/dbinit_done" ]; then
   exit 0
 fi
 
+# Validate required environment variables
+if [ -z "$DB_PASSWORD" ]; then
+  echo "ERROR: DB_PASSWORD environment variable is not set"
+  echo "Please set DB_PASSWORD when running the container"
+  exit 1
+fi
+
+if [ -z "$DB_ROOT_PASSWORD" ]; then
+  echo "ERROR: DB_ROOT_PASSWORD environment variable is not set"
+  echo "Please set DB_ROOT_PASSWORD when running the container"
+  exit 1
+fi
+
 # Create data and caches directories
 mkdir -p $PATH_TO_MONARC/data/cache $PATH_TO_MONARC/data/DoctrineORMModule/Proxy $PATH_TO_MONARC/data/LazyServices/Proxy $PATH_TO_MONARC/data/import/files
 

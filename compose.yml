@@ -8,12 +8,7 @@
 
 services:
   monarc:
-    # Option 1: Use pre-built image from Docker Hub (recommended)
     image: mitexleo/monarc.lu:2.13.3-p6
-
-    # Option 2: Build from local Dockerfile
-    # build: .
-    # Remove or comment out the 'image' line above if using local build
     container_name: monarc
     restart: unless-stopped
     ports:

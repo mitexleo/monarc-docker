@@ -17,12 +17,15 @@ This Docker image provides a containerized version of **Monarc** (Method for an 
    ```bash
    git clone <repository-url>
    cd monarc-docker
+
+   **Note**: Docker Compose supports multiple file names: `docker-compose.yml`, `compose.yml`, or `docker-compose.yaml`. This repository includes both `docker-compose.yml` and `compose.yml` (they are identical). Use whichever filename you prefer.
    ```
 
-2. **Set up environment variables:**
+2. **Set up environment variables (optional but recommended for production):**
    ```bash
    cp env.example .env
    # Edit .env and set secure passwords
+   # If .env is not created, default passwords will be used
    nano .env
    ```
 
@@ -51,10 +54,10 @@ docker network create monarc-network
 docker run -d \
   --name monarc-db \
   --network monarc-network \
-  -e MYSQL_ROOT_PASSWORD=your_root_password \
-  -e MYSQL_DATABASE=monarc_cli \
-  -e MYSQL_USER=monarc \
-  -e MYSQL_PASSWORD=your_password \
+  -e MARIADB_ROOT_PASSWORD=your_root_password \
+  -e MARIADB_DATABASE=monarc_cli \
+  -e MARIADB_USER=monarc \
+  -e MARIADB_PASSWORD=your_password \
   -v db_data:/var/lib/mysql \
   mariadb:lts
 
@@ -82,11 +85,100 @@ docker run -d \
 | `2.13.3` | Major version 2.13.3 |
 | `latest` | Latest stable version |
 
+## 🛠️ Building from Source
+
+If you prefer to build the Docker image locally instead of using the pre-built images from Docker Hub, follow these steps:
+
+### Prerequisites
+- Docker installed on your system
+- Git (to clone the repository)
+- Sufficient disk space (approximately 2GB during build)
+
+### Build Steps
+
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd monarc-docker
+   ```
+
+2. **Build the Docker image:**
+   ```bash
+   # Build with default Monarc version (2.13.3-p6)
+   docker build -t monarc:local .
+   
+   # Or specify a custom tag
+   docker build -t monarc:2.13.3-p6-local .
+   ```
+
+3. **Test the built image:**
+   ```bash
+   # Run a quick test
+   docker run --rm monarc:local --help
+   ```
+
+### Custom Build Options
+
+You can customize the build by modifying the `Dockerfile`:
+
+1. **Change Monarc version:** Edit the `MONARC_VERSION` environment variable in the Dockerfile
+   ```dockerfile
+   ENV MONARC_VERSION=v2.13.2  # Change to desired version
+   ```
+
+2. **Add build arguments:** Use Docker build arguments for customization
+   ```bash
+   docker build --build-arg MONARC_VERSION=v2.13.2 -t monarc:custom .
+   ```
+
+3. **Include development tools:** Uncomment XDEBUG in Dockerfile for development
+   ```dockerfile
+   # Uncomment these lines for development:
+   # RUN pecl install xdebug
+   # RUN docker-php-ext-enable xdebug
+   ```
+
+### Build Optimization
+
+- **Cache utilization:** Docker will cache layers for faster subsequent builds
+- **Multi-stage builds:** Consider implementing multi-stage builds for smaller final images
+- **Security scanning:** Use `docker scan` to check for vulnerabilities in your built image
+
+### Verification
+
+After building, verify the image was created successfully:
+```bash
+# List Docker images
+docker images | grep monarc
+
+# Check image details
+docker inspect monarc:local
+```
+
+### Using Your Custom Build
+
+Update your `docker-compose.yml` to use your locally built image:
+```yaml
+services:
+  monarc:
+    build: .  # Build from local Dockerfile
+    # OR use your built image:
+    # image: monarc:local
+    # Remove: image: mitexleo/monarc.lu:2.13.3-p6
+```
+
+### Troubleshooting Build Issues
+
+- **Network errors during apt-get:** Ensure Docker has network access
+- **Out of disk space:** Clean up unused Docker images with `docker system prune`
+- **Permission errors:** Run Docker commands with appropriate privileges
+- **Build timeouts:** Increase Docker daemon timeout if building on slow connections
+
 ## ⚙️ Environment Configuration
 
 ### Required Variables
-- `DB_PASSWORD`: Password for Monarc database user (required)
-- `DB_ROOT_PASSWORD`: MariaDB root password (required)
+- `DB_PASSWORD`: Password for Monarc database user (default: `monarc_password`)
+- `DB_ROOT_PASSWORD`: MariaDB root password (default: `root_password`)
 
 ### Optional Variables
 - `DB_USER`: Database username (default: `monarc`)
@@ -101,6 +193,15 @@ docker run -d \
 4. Set up proper network isolation
 5. Enable HTTPS with reverse proxy
 
+### Default Passwords
+If no `.env` file is provided, the following defaults are used:
+- Database user password: `monarc_password`
+- Database root password: `root_password`
+- Database username: `monarc`
+- Database names: `monarc_cli` and `monarc_common`
+
+**Important**: These defaults are for testing only. Always use secure, unique passwords in production.
+
 ## 🗄️ Persistent Storage
 
 The Docker Compose configuration creates two volumes:
@@ -110,11 +211,13 @@ The Docker Compose configuration creates two volumes:
 
 To backup data:
 ```bash
-# Backup database
+# Backup database (using default or custom password)
 docker exec monarc-db mysqldump -u monarc -p monarc_cli > backup.sql
 
 # Restore database
 docker exec -i monarc-db mysql -u monarc -p monarc_cli < backup.sql
+
+# Note: If using custom passwords, adjust the commands accordingly
 ```
 
 ## ☸️ Kubernetes Deployment
@@ -139,16 +242,16 @@ spec:
       - name: monarc-db
         image: mariadb:lts
         env:
-        - name: MYSQL_ROOT_PASSWORD
+        - name: MARIADB_ROOT_PASSWORD
           valueFrom:
             secretKeyRef:
               name: monarc-secrets
               key: db-root-password
-        - name: MYSQL_DATABASE
+        - name: MARIADB_DATABASE
           value: "monarc_cli"
-        - name: MYSQL_USER
+        - name: MARIADB_USER
           value: "monarc"
-        - name: MYSQL_PASSWORD
+        - name: MARIADB_PASSWORD
           valueFrom:
             secretKeyRef:
               name: monarc-secrets
@@ -317,6 +420,20 @@ spec:
 
 ### Upgrade Notes
 If upgrading from Monarc v2.12.5 or earlier, PHP 8.x is required (already satisfied by this image).
+
+### Troubleshooting
+
+#### Missing Environment Variables
+If you see warnings about missing environment variables, the system will use default values:
+- `DB_PASSWORD`: `monarc_password`
+- `DB_ROOT_PASSWORD`: `root_password`
+
+To fix, either:
+1. Create a `.env` file with custom passwords
+2. Or set environment variables directly in the shell before running docker-compose
+
+#### MariaDB vs MySQL Environment Variables
+The MariaDB container uses `MARIADB_*` environment variables, not `MYSQL_*`. The docker-compose.yml handles this automatically.
 
 ## 🤝 Contributing
 
