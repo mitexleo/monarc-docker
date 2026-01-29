@@ -1,56 +1,342 @@
-# Monarc docker image
-This docker image contains the dockerized version of Monarc from NC3 (Https://monarc.lu).
-It's a "Method for an Optimised aNalysis of Risks".
-Since there is no official docker version, we created one by our selves.
+# Monarc Docker Image
 
-## How to use locally with docker
-To try it locally with docker, you can simply start with the docker-compose.yml example. It contains predefined values, ready to use.
+[![Docker Pulls](https://img.shields.io/docker/pulls/mitexleo/monarc.lu)](https://hub.docker.com/r/mitexleo/monarc.lu)
+[![Monarc Version](https://img.shields.io/badge/Monarc-2.13.3--p6-blue)](https://www.monarc.lu)
 
-## How to use in Kubernetes
+This Docker image provides a containerized version of **Monarc** (Method for an Optimised aNalysis of Risks) from NC3 Luxembourg (https://monarc.lu). Since there is no official Docker image, this community-maintained version offers an easy way to deploy and run Monarc in containerized environments.
 
-Create two deployments.
+## 🚀 Quick Start
+
+### Prerequisites
+- Docker and Docker Compose
+- At least 2GB RAM recommended
+
+### Using Docker Compose (Recommended)
+
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd monarc-docker
+   ```
+
+2. **Set up environment variables:**
+   ```bash
+   cp env.example .env
+   # Edit .env and set secure passwords
+   nano .env
+   ```
+
+3. **Start the stack:**
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **Access the application:**
+   - URL: http://localhost:8086
+   - Default login: `admin@admin.localhost`
+   - Default password: `admin`
+
+5. **Check logs:**
+   ```bash
+   docker-compose logs -f monarc
+   ```
+
+### Using Docker Hub Image Directly
+
+```bash
+# Create network
+docker network create monarc-network
+
+# Start MariaDB
+docker run -d \
+  --name monarc-db \
+  --network monarc-network \
+  -e MYSQL_ROOT_PASSWORD=your_root_password \
+  -e MYSQL_DATABASE=monarc_cli \
+  -e MYSQL_USER=monarc \
+  -e MYSQL_PASSWORD=your_password \
+  -v db_data:/var/lib/mysql \
+  mariadb:lts
+
+# Start Monarc
+docker run -d \
+  --name monarc \
+  --network monarc-network \
+  -p 8086:80 \
+  -e DB_HOST=monarc-db \
+  -e DB_USER=monarc \
+  -e DB_PASSWORD=your_password \
+  -e DB_ROOT_PASSWORD=your_root_password \
+  -e DB_CLI_NAME=monarc_cli \
+  -e DB_COMMON_NAME=monarc_common \
+  -e APPLICATION_ENV=production \
+  -v monarc_data:/var/lib/monarc/fo/data \
+  mitexleo/monarc.lu:2.13.3-p6
+```
+
+## 📦 Available Tags
+
+| Tag | Description |
+|-----|-------------|
+| `2.13.3-p6` | Latest patch version (recommended) |
+| `2.13.3` | Major version 2.13.3 |
+| `latest` | Latest stable version |
+
+## ⚙️ Environment Configuration
+
+### Required Variables
+- `DB_PASSWORD`: Password for Monarc database user (required)
+- `DB_ROOT_PASSWORD`: MariaDB root password (required)
+
+### Optional Variables
+- `DB_USER`: Database username (default: `monarc`)
+- `DB_CLI_NAME`: CLI database name (default: `monarc_cli`)
+- `DB_COMMON_NAME`: Common database name (default: `monarc_common`)
+- `APPLICATION_ENV`: Application environment (default: `production`)
+
+### Security Best Practices
+1. **Always** change default passwords in production
+2. Use Docker secrets in production environments
+3. Regularly rotate database passwords
+4. Set up proper network isolation
+5. Enable HTTPS with reverse proxy
+
+## 🗄️ Persistent Storage
+
+The Docker Compose configuration creates two volumes:
+
+1. **`db_data`**: MariaDB database files
+2. **`monarc_data`**: Monarc application data (cache, imports, uploads)
+
+To backup data:
+```bash
+# Backup database
+docker exec monarc-db mysqldump -u monarc -p monarc_cli > backup.sql
+
+# Restore database
+docker exec -i monarc-db mysql -u monarc -p monarc_cli < backup.sql
+```
+
+## ☸️ Kubernetes Deployment
 
 ### 1st Deployment: MariaDB
-|Name     |Value|
-|---------|----------|
-|Container| monarc-db|
-|Container Image|mariadb:10.5|
-|Ports|- For remote access: 3306 TCP as ClusterIP|
 
-Environment variables:
-
-|Name|Value|
-|-|-|
-|MYSQL_ROOT_PASSWORD|yyyy|
-|MYSQL_DATABASE|monarc_cli|
-|MYSQL_USER|monarc|
-|MYSQL_PASSWORD|anothers3cret!|
-
-Storage mounted to: /var/lib/mysql
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monarc-db
+spec:
+  selector:
+    matchLabels:
+      app: monarc-db
+  template:
+    metadata:
+      labels:
+        app: monarc-db
+    spec:
+      containers:
+      - name: monarc-db
+        image: mariadb:lts
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: monarc-secrets
+              key: db-root-password
+        - name: MYSQL_DATABASE
+          value: "monarc_cli"
+        - name: MYSQL_USER
+          value: "monarc"
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: monarc-secrets
+              key: db-password
+        volumeMounts:
+        - name: db-storage
+          mountPath: /var/lib/mysql
+        ports:
+        - containerPort: 3306
+      volumes:
+      - name: db-storage
+        persistentVolumeClaim:
+          claimName: monarc-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: monarc-db
+spec:
+  selector:
+    app: monarc-db
+  ports:
+  - port: 3306
+    targetPort: 3306
+  type: ClusterIP
+```
 
 ### 2nd Deployment: Monarc
-|Name     |Value|
-|---------|----------|
-|Container| monarc|
-|Container Image|docker-registry-server.com/monarc:latest|
-|Ports|- 80 TCP as ClusterIP|
 
-
-Environment variables:
-
-|Name|Value|
-|-|-|
-|DB_PASSWORD|xxxx|
-|DB_ROOT_PASSWORD|yyyy|
-|DB_HOST|monarc-db|
-
-Storage mounted to: /var/lib/monarc/fo/data
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monarc
+spec:
+  selector:
+    matchLabels:
+      app: monarc
+  template:
+    metadata:
+      labels:
+        app: monarc
+    spec:
+      containers:
+      - name: monarc
+        image: mitexleo/monarc.lu:2.13.3-p6
+        env:
+        - name: DB_HOST
+          value: "monarc-db"
+        - name: DB_USER
+          value: "monarc"
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: monarc-secrets
+              key: db-password
+        - name: DB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: monarc-secrets
+              key: db-root-password
+        - name: DB_CLI_NAME
+          value: "monarc_cli"
+        - name: DB_COMMON_NAME
+          value: "monarc_common"
+        - name: APPLICATION_ENV
+          value: "production"
+        volumeMounts:
+        - name: monarc-data
+          mountPath: /var/lib/monarc/fo/data
+        ports:
+        - containerPort: 80
+      volumes:
+      - name: monarc-data
+        persistentVolumeClaim:
+          claimName: monarc-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: monarc
+spec:
+  selector:
+    app: monarc
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+```
 
 ### Create Ingress
-Url: http://monarc.myserver.cloud/
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: monarc-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: monarc.yourdomain.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: monarc
+            port:
+              number: 80
+```
 
-Target service: monarc
+## 🔧 Troubleshooting
 
-ingress class: nginx
+### Common Issues
 
-MONARC application and usually login: admin@admin.localhost, password: admin
+1. **Database connection errors:**
+   ```bash
+   # Check database logs
+   docker-compose logs db
+   
+   # Test database connectivity
+   docker exec monarc-db mysql -u monarc -p monarc_cli
+   ```
+
+2. **Application won't start:**
+   ```bash
+   # Check Monarc logs
+   docker-compose logs monarc
+   
+   # Restart services
+   docker-compose restart
+   ```
+
+3. **Permission errors:**
+   ```bash
+   # Fix permissions on data volumes
+   docker-compose down
+   sudo chown -R 1000:1000 ./volumes/
+   docker-compose up -d
+   ```
+
+4. **Out of memory:**
+   - Increase Docker memory allocation
+   - Add swap space if running on limited resources
+   - Consider using `--memory` limits in production
+
+### Health Checks
+- Monarc health: `curl http://localhost:8086/`
+- Database health: `docker exec monarc-db mysqladmin ping`
+
+## 📊 Version Information
+
+### Current Version: 2.13.3-p6
+- **Monarc**: 2.13.3-p6
+- **PHP**: 8.1
+- **Web Server**: Apache 2.4
+- **Database**: MariaDB (via separate container)
+
+### New Features in 2.13.3
+- Possibility to reset 2FA of users by the admin account
+- Global analyses stats limited to users with CEO (global statistics) role
+- Import capability for risks with mode (generic | specific) property on BackOffice
+- Various bug fixes and improvements
+
+### Upgrade Notes
+If upgrading from Monarc v2.12.5 or earlier, PHP 8.x is required (already satisfied by this image).
+
+## 🤝 Contributing
+
+This Docker image is community-maintained. Contributions are welcome!
+
+1. Fork the repository
+2. Create a feature branch
+3. Submit a pull request
+
+## 📄 License
+
+This Docker image is provided under the same license as Monarc itself (AGPL-3.0-or-later). Monarc is developed by the Luxembourg House of Cybersecurity.
+
+## 🔗 Links
+
+- [Monarc Official Website](https://www.monarc.lu)
+- [Monarc Documentation](https://www.monarc.lu/documentation/)
+- [Docker Hub Repository](https://hub.docker.com/r/mitexleo/monarc.lu)
+- [Monarc GitHub](https://github.com/monarc-project)
+
+## ⚠️ Disclaimer
+
+This is not an official NC3 Luxembourg product. Use at your own risk in production environments. Always perform security assessments and follow your organization's security policies.

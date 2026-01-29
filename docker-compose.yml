@@ -1,29 +1,103 @@
-# docker-compose.yml
+# Monarc 2.13.3-p6 Docker Compose Configuration
+#
+# Quick start:
+# 1. Copy .env.example to .env and set passwords
+# 2. Run: docker-compose up -d
+# 3. Access: http://localhost:8086
+# 4. Login: admin@admin.localhost / admin
+
+version: "3.8"
 
 services:
   monarc:
-    build: .
+    image: mitexleo/monarc.lu:2.13.3-p6
+    container_name: monarc
+    restart: unless-stopped
     ports:
       - "8086:80"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
-      - MONARC_VERSION=v2.13.3-p6
+      # Database connection
+      - DB_HOST=db
+      - DB_PORT=3306
+      - DB_USER=${DB_USER:-monarc}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - DB_CLI_NAME=${DB_CLI_NAME:-monarc_cli}
+      - DB_COMMON_NAME=${DB_COMMON_NAME:-monarc_common}
+
+      # Application settings
+      - APPLICATION_ENV=${APPLICATION_ENV:-production}
+      - PATH_TO_MONARC=/var/lib/monarc/fo
     volumes:
-      - monarc_data:/var/lib/monarc/fo-data
+      # Persistent storage for Monarc data (imports, cache, etc.)
+      - monarc_data:/var/lib/monarc/fo/data
+    networks:
+      - monarc-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
   db:
     image: mariadb:lts
+    container_name: monarc-db
+    restart: unless-stopped
     environment:
-      - MYSQL_ROOT_PASSWORD=monarc
-      - MYSQL_DATABASE=monarc
-      - MYSQL_USER=monarc
-      - MYSQL_PASSWORD=monarc
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${DB_CLI_NAME:-monarc_cli}
+      - MYSQL_USER=${DB_USER:-monarc}
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+      - MYSQL_INITDB_SKIP_TZINFO=1
     ports:
-      - "3306:3306"
+      - "3306:3306" # Optional: expose for external access
     volumes:
       - db_data:/var/lib/mysql
+      # Uncomment for custom config:
+      # - ./mysql.cnf:/etc/mysql/conf.d/custom.cnf:ro
+    networks:
+      - monarc-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
 volumes:
   db_data:
+    driver: local
   monarc_data:
+    driver: local
+
+networks:
+  monarc-network:
+    driver: bridge
+
+# Optional: For backup/restore, uncomment and customize:
+#  backup:
+#    image: alpine
+#    container_name: monarc-backup
+#    depends_on:
+#      - db
+#    volumes:
+#      - ./backups:/backups
+#      - db_data:/var/lib/mysql:ro
+#    command: |
+#      sh -c '
+#        while true; do
+#          sleep 86400
+#          mysqldump -h db -u $${MYSQL_USER} -p$${MYSQL_PASSWORD} $${MYSQL_DATABASE} > /backups/monarc-$$(date +%Y%m%d-%H%M%S).sql
+#          find /backups -name "*.sql" -mtime +7 -delete
+#        done
+#      '
+#    environment:
+#      - MYSQL_USER=${DB_USER:-monarc}
+#      - MYSQL_PASSWORD=${DB_PASSWORD}
+#      - MYSQL_DATABASE=${DB_CLI_NAME:-monarc_cli}
+#    networks:
+#      - monarc-network
