@@ -430,6 +430,95 @@ spec:
 ### Upgrade Notes
 If upgrading from Monarc v2.12.5 or earlier, PHP 8.x is required (already satisfied by this image).
 
+## 🔄 Upgrading to a Newer Version
+
+### ⚠️ Important: Changing the image tag alone is NOT sufficient
+
+Simply updating the image tag in `compose.yml` and running `docker compose up -d` will **not** apply database migrations. This is because the `initdb.sh` script detects a `dbinit_done` flag file in the persistent `monarc_data` volume and exits early on subsequent starts.
+
+### How Upgrades Work
+
+Monarc uses [Phinx](https://phinx.org/) database migrations to manage schema changes between versions. Each release ships migration files (in `module/Monarc/{Core,FrontOffice}/migrations/`) that are executed by `scripts/upgrade-db.sh`:
+
+```bash
+# upgrade-db.sh runs these commands internally:
+php ./vendor/robmorgan/phinx/bin/phinx migrate -c ./module/Monarc/Core/migrations/phinx.php
+php ./vendor/robmorgan/phinx/bin/phinx migrate -c ./module/Monarc/FrontOffice/migrations/phinx.php
+```
+
+These migrations are **cumulative** — they apply in timestamp order, so jumping multiple versions (e.g. 2.12.x → 2.13.4) works correctly in one run.
+
+### Standard Upgrade Procedure
+
+**Step 1: Backup your databases**
+```bash
+# Backup CLI database
+docker exec monarc-db mysqldump -u monarc -p monarc_cli > monarc_cli_$(date +%F).sql
+
+# Backup Common database
+docker exec monarc-db mysqldump -u monarc -p monarc_common > monarc_common_$(date +%F).sql
+```
+
+**Step 2: Update the image tag**
+
+Edit `compose.yml` (or `docker-compose.yml`):
+```yaml
+services:
+  monarc:
+    image: mitexleo/monarc.lu:2.13.4  # Change to the desired version
+```
+
+**Step 3: Pull the new image and recreate the container**
+```bash
+docker compose pull
+docker compose up -d
+```
+
+**Step 4: Run database migrations**
+
+After the container is running, execute the migration scripts **inside the new container**:
+```bash
+# Apply schema migrations
+docker exec monarc bash -c "cd /var/lib/monarc/fo && ./scripts/upgrade-db.sh"
+
+# Apply data seeds
+docker exec monarc bash -c "cd /var/lib/monarc/fo && ./scripts/seed-db.sh"
+```
+
+> The migration scripts must run inside the **new** container because the Phinx migration files are bundled with each release.
+
+**Step 5: Verify the upgrade**
+```bash
+# Check application health
+curl http://localhost:8086/
+
+# Check container logs for any errors
+docker compose logs monarc
+```
+
+### Upgrade Scenarios
+
+| Scenario | Action Required |
+|----------|----------------|
+| Patch upgrade (e.g. 2.13.3-p5 → 2.13.3-p6) | Run `upgrade-db.sh` + `seed-db.sh` |
+| Minor upgrade (e.g. 2.13.3 → 2.13.4) | Run `upgrade-db.sh` + `seed-db.sh` |
+| Jumping multiple versions (e.g. 2.12.x → 2.13.4) | Run `upgrade-db.sh` + `seed-db.sh` once |
+| Fresh installation | No action needed (init script handles everything) |
+
+### Rollback Procedure
+
+If something goes wrong:
+```bash
+# 1. Restore the previous image tag in compose.yml
+# 2. Recreate the container
+docker compose up -d
+
+# 3. Restore the databases
+# Drop and recreate the databases (use docker exec -i)
+docker exec -i monarc-db mysql -u root -p monarc_common < monarc_common_$(date +%F).sql
+docker exec -i monarc-db mysql -u root -p monarc_cli < monarc_cli_$(date +%F).sql
+```
+
 ### Troubleshooting
 
 #### Missing Environment Variables
