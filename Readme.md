@@ -1,7 +1,7 @@
 # Monarc Docker Image
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/mitexleo/monarc.lu)](https://hub.docker.com/r/mitexleo/monarc.lu)
-[![Monarc Version](https://img.shields.io/badge/Monarc-2.13.3--p6-blue)](https://www.monarc.lu)
+[![Monarc Version](https://img.shields.io/badge/Monarc-2.13.4-blue)](https://www.monarc.lu)
 
 This Docker image provides a containerized version of **Monarc** (Method for an Optimised aNalysis of Risks) from NC3 Luxembourg (https://monarc.lu). Since there is no official Docker image, this community-maintained version offers an easy way to deploy and run Monarc in containerized environments.
 
@@ -74,14 +74,15 @@ docker run -d \
   -e DB_COMMON_NAME=monarc_common \
   -e APPLICATION_ENV=production \
   -v monarc_data:/var/lib/monarc/fo/data \
-  mitexleo/monarc.lu:2.13.3-p6
+  mitexleo/monarc.lu:2.13.4
 ```
 
 ## 📦 Available Tags
 
 | Tag | Description |
 |-----|-------------|
-| `2.13.3-p6` | Latest patch version (recommended) |
+| `2.13.4` | Latest version (recommended) |
+| `2.13.3-p6` | Previous patch version |
 | `2.13.3` | Major version 2.13.3 |
 | `latest` | Latest stable version |
 
@@ -108,7 +109,7 @@ If you prefer to build the Docker image locally instead of using the pre-built i
    docker build -t monarc:local .
    
    # Or specify a custom tag
-   docker build -t monarc:2.13.3-p6-local .
+   docker build -t monarc:2.13.4-local .
    ```
 
 3. **Test the built image:**
@@ -123,12 +124,12 @@ You can customize the build by modifying the `Dockerfile`:
 
 1. **Change Monarc version:** Edit the `MONARC_VERSION` environment variable in the Dockerfile
    ```dockerfile
-   ENV MONARC_VERSION=v2.13.2  # Change to desired version
+   ENV MONARC_VERSION=v2.13.4  # Change to desired version
    ```
 
 2. **Add build arguments:** Use Docker build arguments for customization
    ```bash
-   docker build --build-arg MONARC_VERSION=v2.13.2 -t monarc:custom .
+   docker build --build-arg MONARC_VERSION=v2.13.4 -t monarc:custom .
    ```
 
 3. **Include development tools:** Uncomment XDEBUG in Dockerfile for development
@@ -297,7 +298,7 @@ spec:
     spec:
       containers:
       - name: monarc
-        image: mitexleo/monarc.lu:2.13.3-p6
+        image: mitexleo/monarc.lu:2.13.4
         env:
         - name: DB_HOST
           value: "monarc-db"
@@ -406,17 +407,25 @@ spec:
 
 ## 📊 Version Information
 
-### Current Version: 2.13.3-p6
-- **Monarc**: 2.13.3-p6
+### Current Version: 2.13.4
+- **Monarc**: 2.13.4
 - **PHP**: 8.1
 - **Web Server**: Apache 2.4
 - **Database**: MariaDB (via separate container)
 
-### New Features in 2.13.3
-- Possibility to reset 2FA of users by the admin account
-- Global analyses stats limited to users with CEO (global statistics) role
-- Import capability for risks with mode (generic | specific) property on BackOffice
-- Various bug fixes and improvements
+### New Features in 2.13.4
+- **ISO 27002:2022** updated from 2013 as the default deployment
+- **Swagger API documentation** added — all API endpoints are now described
+- **Increased password security** — minimum password length increased from 9 to 12 characters
+- **FrontOffice Docker dev environment** added to the official repository
+
+### Fixes in 2.13.4
+- Implementation plan: Same measure reported multiple times
+- SQL syntax error (MySQL `ONLY_FULL_GROUP_BY` violation) fixed
+- Dashboard Operational Risks PNG Export incorrect
+- Updated proxy-manager to use LTS version (avoids PHP version limitation)
+- Fixed recommendations export to `.csv` — removed default limit of 25 records
+- Fixed import process for global objects' risks Existing controls fields and threat CIA values
 
 ### Upgrade Notes
 If upgrading from Monarc v2.12.5 or earlier, PHP 8.x is required (already satisfied by this image).
