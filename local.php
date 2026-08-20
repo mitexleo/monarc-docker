@@ -11,9 +11,9 @@
  * credentials from accidentally being committed into version control.
  */
 
-$appdir = getenv('APP_DIR') ?: '/var/lib/monarc';
+$appdir = getenv('APP_DIR') ?: '/var/lib/monarc/fo';
 
-$package_json = json_decode(file_get_contents('./package.json'), true);
+$packageJson = json_decode(file_get_contents($appdir . '/package.json'), true);
 
 return [
     'doctrine' => [
@@ -37,58 +37,20 @@ return [
         ],
     ],
 
-    'languages' => [
-        'fr' => [
-            'index' => 1,
-            'label' => 'Français',
-        ],
-        'en' => [
-            'index' => 2,
-            'label' => 'English',
-        ],
-        'de' => [
-            'index' => 3,
-            'label' => 'Deutsch',
-        ],
-        'nl' => [
-            'index' => 4,
-            'label' => 'Nederlands',
-        ],
-        'es' => [
-            'index' => 5,
-            'label' => 'Spanish',
-        ],
-        'ro' => [
-            'index' => 6,
-            'label' => 'Romanian',
-        ],
-        'it' => [
-            'index' => 7,
-            'label' => 'Italian',
-        ],
-        'pt' => [
-            'index' => 9,
-            'label' => 'Portuguese',
-        ],
-        'pl' => [
-            'index' => 10,
-            'label' => 'Polish',
-        ],
-        'jp' => [
-            'index' => 11,
-            'label' => 'Japanese',
-        ],
-        'zh' => [
-            'index' => 12,
-            'label' => 'Chinese',
-        ],
-    ],
-
     'defaultLanguageIndex' => 1,
 
-    'activeLanguages' => ['fr','en','de','nl','es','ro','it','ja','pl','pt','zh'],
+    // Languages available for the analysis / DB data.
+    'languages' => [
+        'fr' => ['index' => 1, 'label' => 'Français'],
+        'en' => ['index' => 2, 'label' => 'English'],
+        'de' => ['index' => 3, 'label' => 'Deutsch'],
+        'nl' => ['index' => 4, 'label' => 'Dutch'],
+    ],
 
-    'appVersion' => $package_json['version'],
+    // Languages available for the user interface.
+    'activeLanguages' => ['fr', 'en', 'de', 'nl', 'es', 'ro', 'it', 'ja', 'pl', 'pt', 'zh'],
+
+    'appVersion' => $packageJson['version'],
 
     'checkVersion' => true,
     'appCheckingURL' => 'https://version.monarc.lu/check/MONARC',
@@ -98,8 +60,7 @@ return [
         'from' => 'info@monarc.lu',
     ],
 
-    'instanceName' => 'Development', // for example a short URL or client name from ansible
-    'twoFactorAuthEnforced' => false,
+    'instanceName' => 'FrontOffice', // for example a short URL or client name from ansible
 
     'terms' => 'https://my.monarc.lu/terms.html',
 
@@ -122,6 +83,10 @@ return [
 
     'export' => [
         'defaultWithEval' => true,
+    ],
+
+    'deliverable' => [
+        'pdfConverterBinary' => '/usr/bin/soffice',
     ],
 
     'captcha' => [

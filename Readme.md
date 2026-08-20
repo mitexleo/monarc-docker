@@ -1,7 +1,7 @@
 # Monarc Docker Image
 
 [![Docker Pulls](https://img.shields.io/docker/pulls/mitexleo/monarc.lu)](https://hub.docker.com/r/mitexleo/monarc.lu)
-[![Monarc Version](https://img.shields.io/badge/Monarc-2.13.4-blue)](https://www.monarc.lu)
+[![Monarc Version](https://img.shields.io/badge/Monarc-2.14.1-blue)](https://www.monarc.lu)
 
 This Docker image provides a containerized version of **Monarc** (Method for an Optimised aNalysis of Risks) from NC3 Luxembourg (https://monarc.lu). Since there is no official Docker image, this community-maintained version offers an easy way to deploy and run Monarc in containerized environments.
 
@@ -74,15 +74,15 @@ docker run -d \
   -e DB_COMMON_NAME=monarc_common \
   -e APPLICATION_ENV=production \
   -v monarc_data:/var/lib/monarc/fo/data \
-  mitexleo/monarc.lu:2.13.4
+  mitexleo/monarc.lu:2.14.1
 ```
 
 ## 📦 Available Tags
 
 | Tag | Description |
 |-----|-------------|
-| `2.13.4` | Latest version (recommended) |
-| `2.13.3-p6` | Previous patch version |
+| `2.14.1` | Latest version (recommended) |
+| `2.13.4` | Previous version |
 | `2.13.3` | Major version 2.13.3 |
 | `latest` | Latest stable version |
 
@@ -105,11 +105,11 @@ If you prefer to build the Docker image locally instead of using the pre-built i
 
 2. **Build the Docker image:**
    ```bash
-   # Build with default Monarc version (2.13.3-p6)
+   # Build with default Monarc version (2.14.1)
    docker build -t monarc:local .
    
    # Or specify a custom tag
-   docker build -t monarc:2.13.4-local .
+   docker build -t monarc:2.14.1-local .
    ```
 
 3. **Test the built image:**
@@ -124,12 +124,12 @@ You can customize the build by modifying the `Dockerfile`:
 
 1. **Change Monarc version:** Edit the `MONARC_VERSION` environment variable in the Dockerfile
    ```dockerfile
-   ENV MONARC_VERSION=v2.13.4  # Change to desired version
+   ENV MONARC_VERSION=v2.14.1  # Change to desired version
    ```
 
 2. **Add build arguments:** Use Docker build arguments for customization
    ```bash
-   docker build --build-arg MONARC_VERSION=v2.13.4 -t monarc:custom .
+   docker build --build-arg MONARC_VERSION=v2.14.1 -t monarc:custom .
    ```
 
 3. **Include development tools:** Uncomment XDEBUG in Dockerfile for development
@@ -165,7 +165,7 @@ services:
     build: .  # Build from local Dockerfile
     # OR use your built image:
     # image: monarc:local
-    # Remove: image: mitexleo/monarc.lu:2.13.3-p6
+    # Remove: image: mitexleo/monarc.lu:2.14.1
 ```
 
 ### Troubleshooting Build Issues
@@ -298,7 +298,7 @@ spec:
     spec:
       containers:
       - name: monarc
-        image: mitexleo/monarc.lu:2.13.4
+        image: mitexleo/monarc.lu:2.14.1
         env:
         - name: DB_HOST
           value: "monarc-db"
@@ -407,19 +407,30 @@ spec:
 
 ## 📊 Version Information
 
-### Current Version: 2.13.4
-- **Monarc**: 2.13.4
+### Current Version: 2.14.1
+- **Monarc**: 2.14.1
 - **PHP**: 8.1
 - **Web Server**: Apache 2.4
 - **Database**: MariaDB (via separate container)
+- **PDF Conversion**: LibreOffice (`/usr/bin/soffice`)
 
-### New Features in 2.13.4
+### New Features in 2.14.1
+- **Asset-based ISO 27005:2022 alignment**
+- **CyFun referential integration** (FrontOffice, BackOffice, MOSP)
+- **PDF report generation** — deliverable reports can now be exported as PDF (via LibreOffice)
+- **Create a real blank analysis** without needing a model
+
+### Other Changes in 2.14.1
+- Languages config restructured: analysis/DB data languages (fr, en, de, nl) separated from UI languages
+- Removed deprecated password `salt` config and `twoFactorAuthEnforced` setting
+
+### New Features in 2.13.4 (previous release)
 - **ISO 27002:2022** updated from 2013 as the default deployment
 - **Swagger API documentation** added — all API endpoints are now described
 - **Increased password security** — minimum password length increased from 9 to 12 characters
 - **FrontOffice Docker dev environment** added to the official repository
 
-### Fixes in 2.13.4
+### Fixes in 2.13.4 (previous release)
 - Implementation plan: Same measure reported multiple times
 - SQL syntax error (MySQL `ONLY_FULL_GROUP_BY` violation) fixed
 - Dashboard Operational Risks PNG Export incorrect
@@ -446,7 +457,7 @@ php ./vendor/robmorgan/phinx/bin/phinx migrate -c ./module/Monarc/Core/migration
 php ./vendor/robmorgan/phinx/bin/phinx migrate -c ./module/Monarc/FrontOffice/migrations/phinx.php
 ```
 
-These migrations are **cumulative** — they apply in timestamp order, so jumping multiple versions (e.g. 2.12.x → 2.13.4) works correctly in one run.
+These migrations are **cumulative** — they apply in timestamp order, so jumping multiple versions (e.g. 2.12.x → 2.14.1) works correctly in one run.
 
 ### Standard Upgrade Procedure
 
@@ -465,7 +476,7 @@ Edit `compose.yml` (or `docker-compose.yml`):
 ```yaml
 services:
   monarc:
-    image: mitexleo/monarc.lu:2.13.4  # Change to the desired version
+    image: mitexleo/monarc.lu:2.14.1  # Change to the desired version
 ```
 
 **Step 3: Pull the new image and recreate the container**
@@ -500,9 +511,9 @@ docker compose logs monarc
 
 | Scenario | Action Required |
 |----------|----------------|
-| Patch upgrade (e.g. 2.13.3-p5 → 2.13.3-p6) | Run `upgrade-db.sh` + `seed-db.sh` |
+| Patch upgrade (e.g. 2.13.4 → 2.14.1) | Run `upgrade-db.sh` + `seed-db.sh` |
 | Minor upgrade (e.g. 2.13.3 → 2.13.4) | Run `upgrade-db.sh` + `seed-db.sh` |
-| Jumping multiple versions (e.g. 2.12.x → 2.13.4) | Run `upgrade-db.sh` + `seed-db.sh` once |
+| Jumping multiple versions (e.g. 2.12.x → 2.14.1) | Run `upgrade-db.sh` + `seed-db.sh` once |
 | Fresh installation | No action needed (init script handles everything) |
 
 ### Rollback Procedure

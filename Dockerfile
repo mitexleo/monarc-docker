@@ -1,6 +1,6 @@
 FROM php:8.1-apache
 
-ENV MONARC_VERSION=v2.13.4
+ENV MONARC_VERSION=v2.14.1
 ENV DB_HOST=db
 ENV DB_PORT=3306
 ENV DB_USER=monarc
@@ -12,7 +12,7 @@ ENV APPLICATION_ENV=production
 ENV PATH_TO_MONARC=/var/lib/monarc/fo
 ENV MONARCFO_RELEASE_URL=https://github.com/monarc-project/MonarcAppFO/releases/download/$MONARC_VERSION/MonarcAppFO-$MONARC_VERSION.tar.gz
 
-RUN apt-get update && apt-get install -y ca-certificates zip unzip git gettext curl gsfonts mariadb-client vim imagemagick
+RUN apt-get update && apt-get install -y ca-certificates zip unzip git gettext curl gsfonts mariadb-client vim imagemagick libreoffice-writer
 # dev dependencies for build
 RUN apt-get install -y --no-install-recommends libzip-dev libonig-dev libcurl4-openssl-dev libicu-dev libpng-dev libxml2-dev libmagickwand-dev
 
