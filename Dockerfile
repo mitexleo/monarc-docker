@@ -52,6 +52,8 @@ COPY initdb.sh /var/lib/monarc/initdb.sh
 RUN chmod ugo+x /var/lib/monarc/initdb.sh
 
 RUN apt-get remove -y libzip-dev libonig-dev libcurl4-openssl-dev libicu-dev libpng-dev libxml2-dev libmagickwand-dev
+# Keep the runtime library for the compiled zip extension (libzip.so.5)
+RUN apt-get install -y --no-install-recommends libzip5
 RUN apt -y autoclean && apt -y autoremove && rm -rf /var/lib/apt/lists/*
 
 EXPOSE 80
